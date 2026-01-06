@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState, Fragment} from 'react';
+import React, { useState,useEffect, Fragment} from 'react';
+
 
 import ROSLIB from "roslib";
 
@@ -63,60 +64,64 @@ function NavigationBar( {selectedMode, setSelectedMode} ) {
     );
 }
 
-function Subsystem( {selectedSubsystem, setSelectedSubsystem} ) {
+function Subsystem({ buttons, selected, setSelected }) {
   const [hoveredButtonId, setHoveredButtonId] = useState(null);
   const [selectedButton, setSelectedButton] = useState(0);
   let buttonColor;
 
   return (
-    <div style= {{
-      verticalAlign: "middle", 
-      display: "flex", 
-      flexDirection: "column", 
+    <div style={{
+      display: "flex",
+      flexDirection: "column",
       alignItems: "start",
-      justifyContent: "center", 
-      minHeight: "100vh", 
-      gap: "20px", 
-      marginTop: "-100px", 
-      marginLeft: "-50px"}}>
-        {subsystems.map((subsystem, idx) => {
-            if (hoveredButtonId === idx) {
-              buttonColor = "#960303ff";
-            } else if (selectedButton === idx) {
-              buttonColor = "#530000ff";
-            } else {
-              buttonColor = "#c90202ff";
-            }
-            return(
-            <div 
-              key={subsystem} 
-              style={{
-                background: buttonColor, 
-                border: "2px solid #360101ff", 
-                width: "400px", 
-                height: "80px", 
-                borderRadius: "9999px", 
-                display: "flex", 
-                alignItems: "center", 
-                justifyContent: "center",
-                cursor: "pointer",
-              }}
-              onMouseEnter={() => setHoveredButtonId(idx)}
-              onMouseLeave={() => setHoveredButtonId(null)}
-              onClick={() => {
-                setSelectedSubsystem(subsystem),
-                setSelectedButton(idx)
-              }}
-              >
-              <span style={{fontFamily: "Arial Black", color: "white", fontSize: "20px"}}>{subsystem}</span>
-            </div>
-          );
-        })}
+      justifyContent: "center",
+      minHeight: "100vh",
+      gap: "20px",
+      marginTop: "-100px",
+      marginLeft: "-50px",
+    }}>
+      {buttons.map((label, idx) => {
+        if (hoveredButtonId === idx) {
+          buttonColor = "#960303ff";
+        } else if (selectedButton === idx) {
+          buttonColor = "#530000ff";
+        } else {
+          buttonColor = "#c90202ff";
+        }
+
+        return (
+          <div
+            key={label}
+            style={{
+              background: buttonColor,
+              border: "2px solid #360101ff",
+              width: "400px",
+              height: "80px",
+              borderRadius: "9999px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              cursor: "pointer",
+            }}
+            onMouseEnter={() => setHoveredButtonId(idx)}
+            onMouseLeave={() => setHoveredButtonId(null)}
+            onClick={() => {
+              setSelected(label);
+              setSelectedButton(idx);
+            }}
+          >
+            <span style={{ fontFamily: "Arial Black", color: "white", fontSize: "20px" }}>
+              {label}
+            </span>
+          </div>
+        );
+      })}
     </div>
   );
 }
 
-function PageContent( {selectedMode, selectedSubsystem} ) {
+
+function PageContent({ selectedMode, selectedSubsystem, selectedNavItem, setSelectedNavItem }) {
   if (selectedMode === "Cameras") {
     return <Cameras selectedSubsystem={selectedSubsystem} />;
   }
@@ -130,7 +135,7 @@ function PageContent( {selectedMode, selectedSubsystem} ) {
     return <ROS2Entities selectedSubsystem={selectedSubsystem} />;
   }
   else if (selectedMode === "Navigation") {
-    return <Navigation selectedSubsystem={selectedSubsystem} />;
+    return <Navigation selectedNavItem={selectedNavItem} />;
   }
   else if (selectedMode === "Mission") {
     return <Mission selectedSubsystem={selectedSubsystem} />;
@@ -259,13 +264,172 @@ function ROS2Entities( {selectedSubsystem} ) {
   );
 }
 
-function Navigation( {selectedSubsystem} ) {
+export const NAVIGATION_BUTTONS = [
+  "Object Detection",
+  "Placeholder1",
+  "Placeholder2",
+];
+
+
+function Navigation({selectedNavItem}) { 
+  const [running, setRunning] = useState(false);
+  const [pid, setPid] = useState(null);
+  const [error, setError] = useState("");
+
+  const fetchStatus = async () => {
+    try {
+      setError("");
+      const res = await fetch("http://127.0.0.1:5000/object-detection/status");
+      const data = await res.json();
+      setRunning(Boolean(data.running));
+      setPid(data.pid ?? null);
+    } catch (e) {
+      setError("Backend unreachable");
+      setRunning(false);
+      setPid(null);
+    }
+  };
+
+  const startDetection = async () => {
+    try {
+      setError("");
+      await fetch("http://127.0.0.1:5000/object-detection/start", { method: "POST" });
+      await fetchStatus();
+    } catch (e) {
+      setError("Failed to start");
+    }
+  };
+
+  const stopDetection = async () => {
+    try {
+      setError("");
+      await fetch("http://127.0.0.1:5000/object-detection/stop", { method: "POST" });
+      await fetchStatus();
+    } catch (e) {
+      setError("Failed to stop");
+    }
+  };
+
+  // When you enter Object Detection tab, start polling status
+  useEffect(() => {
+    if (selectedNavItem !== "Object Detection") return;
+
+    fetchStatus(); // initial fetch
+    const id = setInterval(fetchStatus, 1000);
+    return () => clearInterval(id);
+  }, [selectedNavItem]);
+
+  // Optional: auto-start when tab is selected
+  useEffect(() => {
+    if (selectedNavItem !== "Object Detection") return;
+    startDetection();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedNavItem]);
+
   return (
-    <div style={{ padding: "20px" }}>
-      <h1>{selectedSubsystem} - Navigation Mode</h1>
+    <div>
+      <h1>{selectedNavItem} - Navigation Mode</h1>
+
+      {selectedNavItem === "Object Detection" && (
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "16px" }}>
+          {/* Status Row */}
+          <div
+            style={{
+              display: "flex",
+              gap: "12px",
+              alignItems: "center",
+              padding: "12px 16px",
+              borderRadius: "14px",
+              border: "2px solid #1f1e1eff",
+              background: "#2b2b2b",
+              color: "white",
+              width: "fit-content",
+            }}
+          >
+            <div
+              style={{
+                padding: "6px 12px",
+                borderRadius: "9999px",
+                fontWeight: 800,
+                background: running ? "#1f7a1f" : "#8a1f1f",
+              }}
+            >
+              {running ? "RUNNING ✅" : "STOPPED ❌"}
+            </div>
+
+            <div style={{ opacity: 0.9 }}>
+              PID: <span style={{ fontWeight: 700 }}>{pid ?? "—"}</span>
+            </div>
+
+            {error && (
+              <div style={{ color: "#ffb3b3", fontWeight: 700 }}>
+                {error}
+              </div>
+            )}
+          </div>
+
+          {/* Controls */}
+          <div style={{ display: "flex", gap: "10px" }}>
+            <button
+              onClick={startDetection}
+              style={{
+                cursor: "pointer",
+                padding: "10px 16px",
+                borderRadius: "9999px",
+                border: "2px solid #1f1e1eff",
+                background: "#3d3d3d",
+                color: "white",
+                fontWeight: 800,
+              }}
+            >
+              Start
+            </button>
+
+            <button
+              onClick={stopDetection}
+              style={{
+                cursor: "pointer",
+                padding: "10px 16px",
+                borderRadius: "9999px",
+                border: "2px solid #1f1e1eff",
+                background: "#3d3d3d",
+                color: "white",
+                fontWeight: 800,
+              }}
+            >
+              Stop
+            </button>
+
+            <button
+              onClick={fetchStatus}
+              style={{
+                cursor: "pointer",
+                padding: "10px 16px",
+                borderRadius: "9999px",
+                border: "2px solid #1f1e1eff",
+                background: "#3d3d3d",
+                color: "white",
+                fontWeight: 800,
+              }}
+            >
+              Refresh
+            </button>
+          </div>
+
+          {/* Camera */}
+          <div style={{ textAlign: "center" }}>
+            <h2>Object Detection Stream</h2>
+            <img
+              src="http://127.0.0.1:5000/object-detection/stream/0"
+              alt="Object Detection Stream"
+              style={{ width: "640px", height: "480px" }}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
-}
+  }
 
 function Mission( {selectedSubsystem} ) {
   return (
@@ -278,16 +442,34 @@ function Mission( {selectedSubsystem} ) {
 export default function LoopGui() {
   const [selectedMode, setSelectedMode] = useState(modes[0]);
   const [selectedSubsystem, setSelectedSubsystem] = useState(subsystems[0]);
+  const [selectedNavItem, setSelectedNavItem] = useState(NAVIGATION_BUTTONS[0]);
   return(
     <div>
     <div>
       <NavigationBar selectedMode={selectedMode} setSelectedMode={setSelectedMode} />
       <div style={{ display: "flex", flexDirection: "row", width: "100%", minHeight: "calc(100vh - 60px)" }}>
         <div style={{ flex: "0 0 420px" }}>
-          <Subsystem selectedSubsystem={selectedSubsystem} setSelectedSubsystem={setSelectedSubsystem} />
-        </div>
+          {
+            selectedMode === "Navigation" ? (
+              <Subsystem
+                buttons={NAVIGATION_BUTTONS}
+                selected={selectedNavItem}
+                setSelected={setSelectedNavItem}
+              />
+            ) : (
+              <Subsystem
+                buttons={subsystems}
+                selected={selectedSubsystem}
+                setSelected={setSelectedSubsystem}
+              />
+            )
+          }
+      </div>
+
         <div style={{ flex: 1, padding: "40px", justifyContent: "center", alignItems: "center", textAlign: "center" }}>
-          <PageContent selectedMode={selectedMode} selectedSubsystem={selectedSubsystem} />
+          <PageContent selectedMode={selectedMode} selectedSubsystem={selectedSubsystem} 
+                      selectedNavItem={selectedNavItem} setSelectedNavItem={setSelectedNavItem}
+          />
         </div>
       </div>
     </div>
