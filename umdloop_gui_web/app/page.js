@@ -1,14 +1,12 @@
 "use client";
 
-import React, { useState,useEffect, Fragment} from 'react';
+import React, { useState, useEffect } from 'react';
 
 
 import ROSLIB from "roslib";
-import MapView from "./MapView";
-import { getRosbridgeUrl } from "./config";
 
-export const modes = ["Simulation", "Cameras", "Sensors", "ROS2 Entities", "Navigation", "Mission", "Map"];
-export const icons = ["simulation.png", "camera.png", "sensor.png", "ros2.png", "navigation.png", "mission.png", "navigation.png"];
+export const modes = ["Drone", "Cameras", "Sensors", "ROS2 Entities", "Navigation", "Mission"];
+export const icons = ["drone.png", "camera.png", "sensor.png", "ros2.png", "navigation.png", "mission.png"];
 export const subsystems = ["Drive", "Arm", "Science"];
 
 function NavigationBar( {selectedMode, setSelectedMode} ) {
@@ -18,14 +16,12 @@ function NavigationBar( {selectedMode, setSelectedMode} ) {
     return (
         <nav style={{
           display: "flex",
-          justifyContent: "flex-start",
+          flexWrap: "wrap",
+          justifyContent: "center",
+          alignItems: "center",
+          gap: "6px",
+          padding: "12px 8px",
           background: "#3d3d3d"}}>
-            <button key="loop" style={{
-              background: "none",
-              border: "none",
-              cursor: "pointer" }}>
-                <img src="/loop.png" alt="loop" style={{width: "220px", height: "40px", paddingLeft: "20px", paddingRight: "20px"}} />
-            </button>
             {icons.map((mode, idx) => {
               if (hoveredButtonId === idx) {
                 buttonColor = "#353535ff";
@@ -35,33 +31,33 @@ function NavigationBar( {selectedMode, setSelectedMode} ) {
                 buttonColor = "#3d3d3d";
               }
               return(
-                <Fragment key={mode}>
-                  {idx < icons.length && <div style={{ width: "5px", background: "#1f1e1eff"}}></div>}
-                  <button
-                    key={mode}
-                    style={{
-                      background: buttonColor,
-                      paddingRight: "100px",
-                      paddingLeft: "100px",
-                      paddingTop: "10px",
-                      paddingBottom: "10px",
-                      cursor: "pointer",
-                    }}
-                    onMouseEnter={() => setHoveredButtonId(idx)}
-                    onMouseLeave={() => setHoveredButtonId(null)}
-                    onClick={() => {
-                      setSelectedMode(modes[idx])
-                      setSelectedButton(idx)
-                    }}
-                  >
-                    <img src={`/${mode}`} alt={mode.replace('.png', '')} style={{ width: "50px", height: "50px" }} />
-                    <span style={{ color: "white", fontSize: "12px" }}>{modes[idx]}</span>
-                  </button>
-                </Fragment>
+                <button
+                  key={mode}
+                  style={{
+                    background: buttonColor,
+                    border: "2px solid #1f1e1eff",
+                    borderRadius: "10px",
+                    padding: "12px 8px",
+                    cursor: "pointer",
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    gap: "6px",
+                    flex: 1,
+                    minWidth: "0",
+                  }}
+                  onMouseEnter={() => setHoveredButtonId(idx)}
+                  onMouseLeave={() => setHoveredButtonId(null)}
+                  onClick={() => {
+                    setSelectedMode(modes[idx])
+                    setSelectedButton(idx)
+                  }}
+                >
+                  <img src={`/${mode}`} alt={mode.replace('.png', '')} style={{ width: "36px", height: "36px" }} />
+                  <span style={{ color: "white", fontSize: "10px", whiteSpace: "nowrap" }}>{modes[idx]}</span>
+                </button>
               );
             })}
-            <div style={{ width: "5px", background: "#1f1e1eff" }}></div>
-            <div style={{paddingRight: "50px"}}></div>
         </nav>
     );
 }
@@ -122,13 +118,66 @@ function Subsystem({ buttons, selected, setSelected }) {
   );
 }
 
+// Horizontal subsystem bar for vertical monitor layout
+function SubsystemBar({ buttons, selected, setSelected }) {
+  const [hoveredButtonId, setHoveredButtonId] = useState(null);
+
+  return (
+    <div style={{
+      display: "flex",
+      flexDirection: "row",
+      justifyContent: "center",
+      alignItems: "center",
+      gap: "12px",
+      padding: "12px 20px",
+      background: "#2b2b2b",
+      borderBottom: "2px solid #1f1e1eff",
+    }}>
+      {buttons.map((label, idx) => {
+        let buttonColor;
+        if (hoveredButtonId === idx) {
+          buttonColor = "#960303ff";
+        } else if (selected === label) {
+          buttonColor = "#530000ff";
+        } else {
+          buttonColor = "#c90202ff";
+        }
+
+        return (
+          <div
+            key={label}
+            style={{
+              background: buttonColor,
+              border: "2px solid #360101ff",
+              padding: "10px 32px",
+              borderRadius: "9999px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              cursor: "pointer",
+              transition: "background 0.15s ease",
+            }}
+            onMouseEnter={() => setHoveredButtonId(idx)}
+            onMouseLeave={() => setHoveredButtonId(null)}
+            onClick={() => setSelected(label)}
+          >
+            <span style={{ fontFamily: "Arial Black", color: "white", fontSize: "14px" }}>
+              {label}
+            </span>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 
 function PageContent({ selectedMode, selectedSubsystem, selectedNavItem, setSelectedNavItem, sharedRos, setSharedRos }) {
   if (selectedMode === "Cameras") {
     return <Cameras selectedSubsystem={selectedSubsystem} />;
   }
-  else if (selectedMode === "Simulation") {
-    return <Simulation selectedSubsystem={selectedSubsystem} />;
+  else if (selectedMode === "Drone") {
+    return <Drone />;
   }
   else if (selectedMode === "Sensors") {
     return <Sensors selectedSubsystem={selectedSubsystem} />;
@@ -146,162 +195,323 @@ function PageContent({ selectedMode, selectedSubsystem, selectedNavItem, setSele
   else if (selectedMode === "Mission") {
     return <Mission selectedSubsystem={selectedSubsystem} />;
   }
-  else if (selectedMode === "Map") {
-    return <MapView selectedSubsystem={selectedSubsystem} />;
-  }
 }
 
-function Simulation( {selectedSubsystem} ) {
+function Drone() {
   return (
-    <div style={{ padding: "20px" }}>
-      <h2>{selectedSubsystem} - Simulation Mode</h2>
+    <div style={{
+      display: "flex",
+      flexDirection: "column",
+      height: "calc(100vh - 145px)",
+      padding: "8px",
+      background: "#1a1a1a",
+    }}>
+      <div style={{
+        background: "#2b2b2b",
+        borderRadius: "24px",
+        border: "2px solid #3d3d3d",
+        padding: "8px",
+        flex: 1,
+        display: "flex",
+        flexDirection: "column",
+      }}>
+        <h3 style={{ color: "white", fontSize: "14px", fontWeight: "bold", textAlign: "center", marginBottom: "8px" }}>
+          Drone OSD - UMD Campus
+        </h3>
+        <iframe
+          src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d12419.932642047048!2d-76.94697!3d38.9869!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x89b7c6a3842e16f1%3A0x7e2a6e8d1e7a8e9e!2sUniversity%20of%20Maryland!5e0!3m2!1sen!2sus!4v1700000000000!5m2!1sen!2sus"
+          style={{
+            flex: 1,
+            width: "100%",
+            border: "none",
+            borderRadius: "20px",
+          }}
+          allowFullScreen=""
+          loading="lazy"
+          referrerPolicy="no-referrer-when-downgrade"
+        />
+      </div>
     </div>
   );
 }
 
 function Cameras({ selectedSubsystem }) {
-  const [fullscreenGroup, setFullscreenGroup] = useState(null);
+  const [fullscreenCam, setFullscreenCam] = useState(null);
 
   useEffect(() => {
-    const handleKey = (e) => { if (e.key === "Escape") setFullscreenGroup(null); };
+    const handleKey = (e) => { if (e.key === "Escape") setFullscreenCam(null); };
     window.addEventListener("keydown", handleKey);
     return () => window.removeEventListener("keydown", handleKey);
   }, []);
 
-  const cameraIds = {
-    Drive: { "Top Left Wheel": [0, 1], "Top Right Wheel": [2, 3], "Bottom Left Wheel": [4, 5], "Bottom Right Wheel": [6, 7], 
-             "Front of the robot": [15] },
-    Arm: { "Base of Arm": [8], "Joint of Arm": [9], "End Effector": [10, 11] },
-    Science: { "Science Cam 1": [12], "Science Cam 2": [13], "Science Cam 3": [14] },
-  };
-
-  const subsystemData = cameraIds[selectedSubsystem];
-  if (!subsystemData) return null;
-
-  return (
-    <div className="py-4 text-white max-h-[calc(100vh-200px)] overflow-y-auto">
-      {/* Header text black and centered */}
-      <h2 className="text-2xl font-semibold text-black text-center mb-6">
-        {selectedSubsystem} – Cameras Mode
-      </h2>
-
-
-      {/* DRIVE */}
-      {selectedSubsystem === "Drive" && (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Front of the Robot - large box */}
-          <div
-            onClick={() =>
-              setFullscreenGroup({ label: "Front of the robot", cams: subsystemData["Front of the robot"] })
-            }
-            className="bg-zinc-900 p-6 rounded-xl border border-zinc-700 shadow-md cursor-pointer hover:bg-zinc-800 hover:scale-[1.02] transition
-                      lg:row-span-2"
-          >
-            <h2 className="text-xl font-bold mb-3 text-center">Front of the robot</h2>
-            <img
-              src={`http://localhost:5000/camera/${subsystemData["Front of the robot"][0]}`}
-              alt="Front of the robot"
-              className="w-full h-[450px] object-cover rounded-lg bg-black"
-            />
-            <p className="text-center mt-2 opacity-80">Camera {subsystemData["Front of the robot"][0]}</p>
-          </div>
-
-          {/* Other four drive cameras */}
-          {Object.entries(subsystemData)
-            .filter(([label]) => label !== "Front of the robot")
-            .map(([label, cams]) => (
-              <div
-                key={label}
-                onClick={() => setFullscreenGroup({ label, cams })}
-                className="bg-zinc-900 p-4 rounded-xl border border-zinc-700 shadow-md cursor-pointer hover:bg-zinc-800 hover:scale-[1.02] transition"
-              >
-                <h2 className="text-xl font-bold mb-3 text-center">{label}</h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {cams.map((id) => (
-                    <div key={id} className="flex flex-col items-center">
-                      <img
-                        src={`http://localhost:5000/camera/${id}`}
-                        alt={`Camera ${id}`}
-                        className="w-full h-56 object-cover rounded-lg bg-black"
-                      />
-                      <p className="text-sm mt-2 opacity-80">Camera {id}</p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ))}
-        </div>
-      )}
-
-
-      {/* ARM */}
-      {selectedSubsystem === "Arm" && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {Object.entries(subsystemData).slice(0, 2).map(([label, cams]) => (
-            <div
-              key={label}
-              onClick={() => setFullscreenGroup({ label, cams })}
-              className="bg-zinc-900 p-4 rounded-xl border border-zinc-700 shadow-md cursor-pointer hover:bg-zinc-800 hover:scale-[1.02] transition"
-            >
-              <h2 className="text-xl font-bold mb-3 text-center">{label}</h2>
-              <img src={`http://localhost:5000/camera/${cams[0]}`} alt={`Camera ${cams[0]}`} className="w-full h-60 object-cover rounded-lg bg-black" />
-              <p className="text-center mt-2 opacity-80">Camera {cams[0]}</p>
-            </div>
-          ))}
-
-          <div
-            onClick={() => setFullscreenGroup({ label: "End Effector", cams: subsystemData["End Effector"] })}
-            className="bg-zinc-900 p-4 rounded-xl border border-zinc-700 shadow-md cursor-pointer hover:bg-zinc-800 hover:scale-[1.02] transition lg:col-span-2"
-          >
-            <h2 className="text-xl font-bold mb-4 text-center">End Effector</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {subsystemData["End Effector"].map((id) => (
-                <div key={id} className="flex flex-col items-center">
-                  <img src={`http://localhost:5000/camera/${id}`} alt={`Camera ${id}`} className="w-full h-56 object-cover rounded-lg bg-black" />
-                  <p className="text-sm mt-2 opacity-80">Camera {id}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* SCIENCE */}
-      {selectedSubsystem === "Science" && (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {Object.entries(subsystemData).map(([label, cams]) => (
-            <div
-              key={label}
-              onClick={() => setFullscreenGroup({ label, cams })}
-              className="bg-zinc-900 p-4 rounded-xl border border-zinc-700 shadow-md cursor-pointer hover:bg-zinc-800 hover:scale-[1.02] transition"
-            >
-              <h2 className="text-xl font-bold mb-4 text-center">{label}</h2>
-              <img src={`http://localhost:5000/camera/${cams[0]}`} alt={`Camera ${cams[0]}`} className="w-full h-60 object-cover rounded-lg bg-black" />
-              <p className="text-center mt-2 opacity-80">Camera {cams[0]}</p>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* FULLSCREEN OVERLAY */}
-      {fullscreenGroup && (
-        <div className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-[100]" onClick={() => setFullscreenGroup(null)}>
-          <div className="bg-zinc-900 p-6 rounded-xl max-w-5xl w-full max-h-[90vh] overflow-y-auto shadow-2xl" onClick={(e) => e.stopPropagation()}>
-            <h2 className="text-2xl font-bold mb-4 text-center">{fullscreenGroup.label}</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {fullscreenGroup.cams.map((id) => (
-                <div key={id} className="flex flex-col items-center">
-                  <img src={`http://localhost:5000/camera/${id}`} alt={`Camera ${id}`} className="w-full max-h-[60vh] object-contain rounded-lg bg-black" />
-                  <p className="text-sm mt-2 opacity-80">Camera {id}</p>
-                </div>
-              ))}
-            </div>
-            <p className="text-center mt-6 opacity-60">(Click outside or press ESC to exit)</p>
-          </div>
-        </div>
-      )}
+  // Reusable big camera card
+  const BigCameraCard = ({ camera, style = {} }) => (
+    <div
+      onClick={() => setFullscreenCam(camera)}
+      style={{
+        background: "#2b2b2b",
+        borderRadius: "24px",
+        border: "2px solid #3d3d3d",
+        padding: "8px",
+        cursor: "pointer",
+        display: "flex",
+        flexDirection: "column",
+        ...style,
+      }}
+      onMouseEnter={(e) => e.currentTarget.style.borderColor = "#c90202"}
+      onMouseLeave={(e) => e.currentTarget.style.borderColor = "#3d3d3d"}
+    >
+      <h3 style={{ color: "white", fontSize: "12px", fontWeight: "bold", textAlign: "center", marginBottom: "4px" }}>
+        {camera.label}
+      </h3>
+      <img
+        src={`http://localhost:5000/camera/${camera.id}`}
+        alt={camera.label}
+        style={{
+          width: "100%",
+          flex: 1,
+          objectFit: "cover",
+          borderRadius: "20px",
+          background: "black",
+        }}
+      />
     </div>
   );
+
+  // Small camera card
+  const SmallCameraCard = ({ camera }) => (
+    <div
+      onClick={() => setFullscreenCam(camera)}
+      style={{
+        background: "#2b2b2b",
+        borderRadius: "12px",
+        border: "2px solid #3d3d3d",
+        padding: "6px",
+        cursor: "pointer",
+        display: "flex",
+        flexDirection: "column",
+      }}
+      onMouseEnter={(e) => e.currentTarget.style.borderColor = "#c90202"}
+      onMouseLeave={(e) => e.currentTarget.style.borderColor = "#3d3d3d"}
+    >
+      <h4 style={{ color: "white", fontSize: "10px", fontWeight: "bold", textAlign: "center", marginBottom: "4px" }}>
+        {camera.label}
+      </h4>
+      <img
+        src={`http://localhost:5000/camera/${camera.id}`}
+        alt={camera.label}
+        style={{
+          width: "100%",
+          flex: 1,
+          objectFit: "cover",
+          borderRadius: "8px",
+          background: "black",
+        }}
+      />
+    </div>
+  );
+
+  // Fullscreen overlay component
+  const FullscreenOverlay = () => fullscreenCam && (
+    <div
+      onClick={() => setFullscreenCam(null)}
+      style={{
+        position: "fixed",
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        background: "rgba(0, 0, 0, 0.95)",
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        justifyContent: "center",
+        zIndex: 1000,
+        padding: "20px",
+      }}
+    >
+      <h2 style={{ color: "white", fontSize: "24px", fontWeight: "bold", marginBottom: "16px" }}>
+        {fullscreenCam.label}
+      </h2>
+      <img
+        src={`http://localhost:5000/camera/${fullscreenCam.id}`}
+        alt={fullscreenCam.label}
+        style={{
+          maxWidth: "100%",
+          maxHeight: "80vh",
+          objectFit: "contain",
+          borderRadius: "12px",
+          background: "black",
+        }}
+      />
+      <p style={{ color: "#888", marginTop: "16px", fontSize: "14px" }}>
+        Click anywhere or press ESC to close
+      </p>
+    </div>
+  );
+
+  // ========== DRIVE CAMERAS LAYOUT ==========
+  if (selectedSubsystem === "Drive") {
+    const frontCamera = { label: "Front Camera", id: 15 };
+    const backCamera = { label: "Back Camera", id: 16 };
+    const sideViews = [
+      { label: "Left Side", id: 17 },
+      { label: "Right Side", id: 18 },
+    ];
+    const wheelCameras = [
+      { label: "Top Left Wheel", cams: [0, 1] },
+      { label: "Top Right Wheel", cams: [2, 3] },
+      { label: "Bottom Left Wheel", cams: [4, 5] },
+      { label: "Bottom Right Wheel", cams: [6, 7] },
+    ];
+
+    return (
+      <div style={{
+        display: "grid",
+        gridTemplateColumns: "1fr 1fr",
+        gridTemplateRows: "1fr 1fr",
+        gap: "8px",
+        padding: "8px",
+        height: "calc(100vh - 145px)",
+        background: "#1a1a1a",
+      }}>
+        {/* Top Left - Front Camera (big) */}
+        <BigCameraCard camera={frontCamera} />
+
+        {/* Top Right - 2x2 Wheel Grid */}
+        <div style={{
+          display: "grid",
+          gridTemplateColumns: "1fr 1fr",
+          gridTemplateRows: "1fr 1fr",
+          gap: "6px",
+          background: "#2b2b2b",
+          borderRadius: "12px",
+          border: "2px solid #3d3d3d",
+          padding: "6px",
+        }}>
+          {wheelCameras.map((wheel) => (
+            <div
+              key={wheel.label}
+              style={{
+                background: "#1a1a1a",
+                borderRadius: "8px",
+                padding: "4px",
+                display: "flex",
+                flexDirection: "column",
+              }}
+            >
+              <h4 style={{ color: "white", fontSize: "9px", fontWeight: "bold", textAlign: "center", marginBottom: "2px" }}>
+                {wheel.label}
+              </h4>
+              <div style={{ display: "flex", gap: "4px", flex: 1 }}>
+                {wheel.cams.map((camId) => (
+                  <img
+                    key={camId}
+                    src={`http://localhost:5000/camera/${camId}`}
+                    alt={`Camera ${camId}`}
+                    onClick={() => setFullscreenCam({ label: `${wheel.label} - Cam ${camId}`, id: camId })}
+                    style={{
+                      flex: 1,
+                      objectFit: "cover",
+                      borderRadius: "4px",
+                      background: "black",
+                      cursor: "pointer",
+                      border: "1px solid #3d3d3d",
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.borderColor = "#c90202"}
+                    onMouseLeave={(e) => e.currentTarget.style.borderColor = "#3d3d3d"}
+                  />
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Bottom Left - Back Camera (big) */}
+        <BigCameraCard camera={backCamera} />
+
+        {/* Bottom Right - 1x2 Side Views */}
+        <div style={{
+          display: "grid",
+          gridTemplateColumns: "1fr 1fr",
+          gap: "6px",
+          background: "#2b2b2b",
+          borderRadius: "12px",
+          border: "2px solid #3d3d3d",
+          padding: "6px",
+        }}>
+          {sideViews.map((side) => (
+            <SmallCameraCard key={side.label} camera={side} />
+          ))}
+        </div>
+
+        <FullscreenOverlay />
+      </div>
+    );
+  }
+
+  // ========== ARM CAMERAS LAYOUT ==========
+  if (selectedSubsystem === "Arm") {
+    const baseCamera = { label: "Base of Arm", id: 8 };
+    const endEffectorCamera = { label: "End Effector", id: 10 };
+    const jointCamera = { label: "Joint of Arm", id: 9 };
+    const gripperCamera = { label: "Gripper Cam", id: 11 };
+
+    return (
+      <div style={{
+        display: "grid",
+        gridTemplateColumns: "1.2fr 1fr",
+        gridTemplateRows: "1fr 1fr",
+        gap: "8px",
+        padding: "8px",
+        height: "calc(100vh - 145px)",
+        background: "#1a1a1a",
+      }}>
+        {/* Top Left - Big view (Base of Arm) */}
+        <BigCameraCard camera={baseCamera} />
+
+        {/* Top Right - Medium view (Joint) */}
+        <SmallCameraCard camera={jointCamera} />
+
+        {/* Bottom Left - Big view (End Effector) */}
+        <BigCameraCard camera={endEffectorCamera} />
+
+        {/* Bottom Right - Medium view (Gripper) */}
+        <SmallCameraCard camera={gripperCamera} />
+
+        <FullscreenOverlay />
+      </div>
+    );
+  }
+
+  // ========== SCIENCE CAMERAS LAYOUT ==========
+  if (selectedSubsystem === "Science") {
+    const scienceCams = [
+      { label: "Science Cam 1", id: 12 },
+      { label: "Science Cam 2", id: 13 },
+      { label: "Science Cam 3", id: 14 },
+    ];
+
+    return (
+      <div style={{
+        display: "flex",
+        flexDirection: "column",
+        gap: "8px",
+        padding: "8px",
+        height: "calc(100vh - 145px)",
+        background: "#1a1a1a",
+      }}>
+        {/* Science cams stacked vertically */}
+        {scienceCams.map((cam) => (
+          <BigCameraCard key={cam.label} camera={cam} style={{ flex: 1 }} />
+        ))}
+
+        <FullscreenOverlay />
+      </div>
+    );
+  }
+
+  return null;
 }
 
 function Sensors( {selectedSubsystem} ) {
@@ -875,47 +1085,43 @@ export default function LoopGui() {
   const [selectedSubsystem, setSelectedSubsystem] = useState(subsystems[0]);
   const [selectedNavItem, setSelectedNavItem] = useState(NAVIGATION_BUTTONS[0]);
   const [sharedRos, setSharedRos] = useState(null);
-  return(
-    <div>
-    <div>
+
+  // Determine which buttons to show based on mode
+  const showSubsystemBar = true; // Always show subsystem bar
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", minHeight: "100vh", background: "#1a1a1a" }}>
+      {/* Top Navigation Bar */}
       <NavigationBar selectedMode={selectedMode} setSelectedMode={setSelectedMode} />
-      <div style={{ display: "flex", flexDirection: "row", width: "100%", minHeight: "calc(100vh - 60px)" }}>
-        <div style={{ flex: "0 0 420px" }}>
-          {
-            selectedMode === "Navigation" ? (
-              <Subsystem
-                buttons={NAVIGATION_BUTTONS}
-                selected={selectedNavItem}
-                setSelected={setSelectedNavItem}
-              />
-            ) : (
-              <Subsystem
-                buttons={subsystems}
-                selected={selectedSubsystem}
-                setSelected={setSelectedSubsystem}
-              />
-            )
-          }
-      </div>
 
-        <div style={{
-          flex: 1,
-          padding: selectedMode === "Map" ? "0" : "40px",
-          justifyContent: "center",
-          alignItems: "center",
-          textAlign: "center",
-          display: selectedMode === "Map" ? "flex" : undefined,
-          flexDirection: selectedMode === "Map" ? "column" : undefined,
-        }}>
-          <PageContent selectedMode={selectedMode} selectedSubsystem={selectedSubsystem}
-                      selectedNavItem={selectedNavItem} setSelectedNavItem={setSelectedNavItem}
-                       sharedRos={sharedRos}
-            setSharedRos={setSharedRos}
+      {/* Subsystem Bar (horizontal) - only show when not in Cameras mode */}
+      {showSubsystemBar && (
+        selectedMode === "Navigation" ? (
+          <SubsystemBar
+            buttons={NAVIGATION_BUTTONS}
+            selected={selectedNavItem}
+            setSelected={setSelectedNavItem}
           />
-        </div>
+        ) : (
+          <SubsystemBar
+            buttons={subsystems}
+            selected={selectedSubsystem}
+            setSelected={setSelectedSubsystem}
+          />
+        )
+      )}
+
+      {/* Main Content Area - full width for vertical monitors */}
+      <div style={{ flex: 1, overflow: "hidden" }}>
+        <PageContent
+          selectedMode={selectedMode}
+          selectedSubsystem={selectedSubsystem}
+          selectedNavItem={selectedNavItem}
+          setSelectedNavItem={setSelectedNavItem}
+          sharedRos={sharedRos}
+          setSharedRos={setSharedRos}
+        />
       </div>
     </div>
-    </div>
-  )
-
+  );
 }
