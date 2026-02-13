@@ -4,9 +4,11 @@ import React, { useState,useEffect, Fragment} from 'react';
 
 
 import ROSLIB from "roslib";
+import MapView from "./MapView";
+import { getRosbridgeUrl } from "./config";
 
-export const modes = ["Simulation", "Cameras", "Sensors", "ROS2 Entities", "Navigation", "Mission"];
-export const icons = ["simulation.png", "camera.png", "sensor.png", "ros2.png", "navigation.png", "mission.png"];
+export const modes = ["Simulation", "Cameras", "Sensors", "ROS2 Entities", "Navigation", "Mission", "Map"];
+export const icons = ["simulation.png", "camera.png", "sensor.png", "ros2.png", "navigation.png", "mission.png", "navigation.png"];
 export const subsystems = ["Drive", "Arm", "Science"];
 
 function NavigationBar( {selectedMode, setSelectedMode} ) {
@@ -14,13 +16,13 @@ function NavigationBar( {selectedMode, setSelectedMode} ) {
     const [selectedButton, setSelectedButton] = useState(0);
     let buttonColor;
     return (
-        <nav style={{ 
-          display: "flex", 
+        <nav style={{
+          display: "flex",
           justifyContent: "flex-start",
           background: "#3d3d3d"}}>
-            <button key="loop" style={{ 
-              background: "none", 
-              border: "none", 
+            <button key="loop" style={{
+              background: "none",
+              border: "none",
               cursor: "pointer" }}>
                 <img src="/loop.png" alt="loop" style={{width: "220px", height: "40px", paddingLeft: "20px", paddingRight: "20px"}} />
             </button>
@@ -35,9 +37,9 @@ function NavigationBar( {selectedMode, setSelectedMode} ) {
               return(
                 <Fragment key={mode}>
                   {idx < icons.length && <div style={{ width: "5px", background: "#1f1e1eff"}}></div>}
-                  <button 
-                    key={mode} 
-                    style={{ 
+                  <button
+                    key={mode}
+                    style={{
                       background: buttonColor,
                       paddingRight: "100px",
                       paddingLeft: "100px",
@@ -140,6 +142,9 @@ function PageContent({ selectedMode, selectedSubsystem, selectedNavItem, setSele
   else if (selectedMode === "Mission") {
     return <Mission selectedSubsystem={selectedSubsystem} />;
   }
+  else if (selectedMode === "Map") {
+    return <MapView selectedSubsystem={selectedSubsystem} />;
+  }
 }
 
 function Simulation( {selectedSubsystem} ) {
@@ -192,7 +197,7 @@ function Sensors( {selectedSubsystem} ) {
 
 function ROS2Entities( {selectedSubsystem} ) {
   const map = new Map();
-  const ros = new ROSLIB.Ros({ url: "ws://localhost:9090" });
+  const ros = new ROSLIB.Ros({ url: getRosbridgeUrl() });
   const subscription_topics = [""];
   const subscription_msg_type = [""];
   const publisher_topics = [""];
@@ -236,7 +241,7 @@ function ROS2Entities( {selectedSubsystem} ) {
     ros_connection_status = "closed";
   });
 
-  
+
   // Create a listeners for each topic in subscription_topics
   subscription_topics.forEach((topic, index) => {
     const listeners = new ROSLIB.Topic({
@@ -270,14 +275,14 @@ export const NAVIGATION_BUTTONS = [
   "Placeholder2",
 ];
 
-function Navigation({selectedNavItem}) { 
+function Navigation({selectedNavItem}) {
   const [running, setRunning] = useState(false);
   const [pid, setPid] = useState(null);
   const [error, setError] = useState("");
 
   const [latitude, setLatitude] = useState("");
   const [longitude, setLongitude] = useState("");
-  const [navMode, setNavMode] = useState("GNSS"); 
+  const [navMode, setNavMode] = useState("GNSS");
 
   const [pathPlanStatus, setPathPlanStatus] = useState("");
 
@@ -326,8 +331,8 @@ function Navigation({selectedNavItem}) {
         body: JSON.stringify({
           latitude: Number(latitude),
           longitude: Number(longitude),
-          position_tolerance: 0.0, 
-          mode: navMode,     
+          position_tolerance: 0.0,
+          mode: navMode,
         }),
       });
 
@@ -550,7 +555,7 @@ function Navigation({selectedNavItem}) {
               ))}
             </div>
 
-            {/* Optional: show what’s selected */}
+            {/* Optional: show what's selected */}
             <div style={{ marginTop: 6, opacity: 0.9 }}>
               {/* Path Plan Button */}
               <button
@@ -613,8 +618,16 @@ export default function LoopGui() {
           }
       </div>
 
-        <div style={{ flex: 1, padding: "40px", justifyContent: "center", alignItems: "center", textAlign: "center" }}>
-          <PageContent selectedMode={selectedMode} selectedSubsystem={selectedSubsystem} 
+        <div style={{
+          flex: 1,
+          padding: selectedMode === "Map" ? "0" : "40px",
+          justifyContent: "center",
+          alignItems: "center",
+          textAlign: "center",
+          display: selectedMode === "Map" ? "flex" : undefined,
+          flexDirection: selectedMode === "Map" ? "column" : undefined,
+        }}>
+          <PageContent selectedMode={selectedMode} selectedSubsystem={selectedSubsystem}
                       selectedNavItem={selectedNavItem} setSelectedNavItem={setSelectedNavItem}
           />
         </div>
