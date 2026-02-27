@@ -691,12 +691,7 @@ function PageContent({ selectedMode, selectedSubsystem, setSelectedSubsystem, se
             setSelected={setSelectedNavItem}
           />
           <div style={{ padding: "8px", overflow: "auto" }}>
-            <Navigation
-              selectedNavItem={selectedNavItem}
-              selectedSubsystem={selectedSubsystem}
-              sharedRos={sharedRos}
-              setSharedRos={setSharedRos}
-            />
+          <Navigation selectedNavItem={selectedNavItem} />
           </div>
         </div>
       </div>
@@ -1325,7 +1320,7 @@ export const NAVIGATION_BUTTONS = [
   "Placeholder2",
 ];
 
-function Navigation({ selectedNavItem, selectedSubsystem, sharedRos, setSharedRos }) {
+function Navigation({ selectedNavItem }) {
   const [running, setRunning] = useState(false);
   const [pid, setPid] = useState(null);
   const [error, setError] = useState("");
@@ -1519,13 +1514,6 @@ function Navigation({ selectedNavItem, selectedSubsystem, sharedRos, setSharedRo
             />
           </div>
 
-          <div style={{ width: "100%", border: "1px solid #333", borderRadius: "10px", overflow: "auto", background: "#1f1f1f" }}>
-            <ROS2Entities
-              selectedSubsystem={selectedSubsystem}
-              sharedRos={sharedRos}
-              setSharedRos={setSharedRos}
-            />
-          </div>
         </div>
       )}
 
