@@ -23,7 +23,13 @@ npm run dev
 Run the web server:
 
 ```bash
-python ./server.py
+uv run backend/server.py
+```
+
+Run the Raman spectrometer backend (optional):
+
+```bash
+uv run backend/raman_backend.py
 ```
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
@@ -47,16 +53,3 @@ So that the map shows the rover's location, the GUI connects to the rover over y
 
 The Map view subscribes to `/gps/fix` (NavSatFix) from the rover over that connection and shows the rover as a green marker. Ensure the rover publishes `/gps/fix` (e.g. from the localization stack or GPS driver).
 
-For UMDLOOP-Native
-To Build, go to /build
-
-$env:CMAKE_PREFIX_PATH="C:\Qt\6.10.0\msvc2022_64"
-cmake ..
-cmake --build . --config Release
-
-# Copy Qt DLLs to your exe
-cd Release
-C:\Qt\6.10.0\msvc2022_64\bin\windeployqt.exe LoopGui.exe
-
-# Run the application
-.\LoopGui.exe
