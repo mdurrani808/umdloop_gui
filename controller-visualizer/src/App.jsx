@@ -1,11 +1,8 @@
 import { useEffect,useState } from 'react';
 import {PressedKeyIcons} from "../assets/Keyboard/pressed"
 import {KeyIcons} from "../assets/Keyboard/unpressed"
-//import {PressedControllerIcons} from "../assets/Controller/pressed"
 import {ControllerIcons} from "../assets/Controller/unpressed"
 import  ControllerOutline from "../assets/Controller/outline.svg?react"
-import {MouseIcons} from "../assets/Mouse/sides"
-import MouseOutline from "../assets/Mouse/body.svg?react" 
 import {AxisIcons} from "../assets/Controller/joystick"
 import "./App.css"
 const KEY_LAYOUT = [
@@ -284,13 +281,4 @@ function Controller({triggerValue,controllerPressed,controllerAxis,buttonSize=73
       </div>
     </div>
   )
-}
-
-function Mouse({buttonSize=74})
-{
-
-  return(
-  <div className='Mouse'>  
-
-  </div>)
 }

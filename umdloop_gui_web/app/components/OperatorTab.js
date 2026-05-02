@@ -1,11 +1,11 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import RamanPlot from "../../spectrometer/RamanPlot";
-
-const RAMAN_WS_URL = "ws://localhost:5001/ws/spectrum";
+import RamanPlot from "./RamanPlot";
+import { getApiBaseUrl, getRamanWsUrl } from "../config";
 
 export default function OperatorTab({ selectedSubsystem, setSelectedSubsystem }) {
+  const apiBaseUrl = getApiBaseUrl();
   const [fullscreenCam, setFullscreenCam] = useState(null);
   const [fps, setFps] = useState(24);
   const [streamPlaying, setStreamPlaying] = useState(true);
@@ -55,7 +55,7 @@ export default function OperatorTab({ selectedSubsystem, setSelectedSubsystem })
         {camera.label}
       </h4>
       <img
-        src={`http://localhost:5000/camera/${camera.id}`}
+        src={`${apiBaseUrl}/camera/${camera.id}`}
         alt={camera.label}
         style={{
           width: "100%",
@@ -92,7 +92,7 @@ export default function OperatorTab({ selectedSubsystem, setSelectedSubsystem })
       >
         <h2 style={{ color: "white", fontSize: "22px", fontWeight: "bold", marginBottom: "12px" }}>{fullscreenCam.label}</h2>
         <img
-          src={`http://localhost:5000/camera/${fullscreenCam.id}`}
+          src={`${apiBaseUrl}/camera/${fullscreenCam.id}`}
           alt={fullscreenCam.label}
           style={{
             maxWidth: "100%",
@@ -118,7 +118,7 @@ export default function OperatorTab({ selectedSubsystem, setSelectedSubsystem })
       body = (
         <div style={{ display: "grid", gap: "10px" }}>
           <img
-            src="http://localhost:5000/camera/12"
+            src={`${apiBaseUrl}/camera/12`}
             alt="Latest panorama preview"
             style={{ width: "100%", maxHeight: "50vh", objectFit: "cover", borderRadius: "10px", border: "1px solid #444", background: "#111" }}
           />
@@ -169,7 +169,7 @@ export default function OperatorTab({ selectedSubsystem, setSelectedSubsystem })
           <div style={{ color: "#d8d8d8", fontSize: "13px" }}>
             Live Raman spectrum from spectrometer backend on port 5001
           </div>
-          <RamanPlot wsUrl={RAMAN_WS_URL} width={700} height={400} />
+          <RamanPlot wsUrl={getRamanWsUrl()} width={700} height={400} />
           <div style={{ color: "#a9a9a9", fontSize: "12px" }}>
             Start with: <code>python3 spectrometer/raman_backend.py</code>
           </div>
@@ -273,7 +273,7 @@ export default function OperatorTab({ selectedSubsystem, setSelectedSubsystem })
                   {wheel.cams.map((camId) => (
                     <img
                       key={camId}
-                      src={`http://localhost:5000/camera/${camId}`}
+                      src={`${apiBaseUrl}/camera/${camId}`}
                       alt={`Camera ${camId}`}
                       onClick={() => setFullscreenCam({ label: `${wheel.label} - Cam ${camId}`, id: camId })}
                       style={{ flex: 1, objectFit: "cover", borderRadius: "4px", background: "black", cursor: "pointer", border: "1px solid #3d3d3d" }}

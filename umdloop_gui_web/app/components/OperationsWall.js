@@ -3,8 +3,10 @@
 import React, { useEffect, useMemo, useState } from "react";
 import ROSLIB from "roslib";
 import MapView from "./MapView";
-import { getApiBaseUrl, getRosbridgeUrl } from "../config";
+import { getApiBaseUrl } from "../config";
 import { TATTU_HV_6S_22000, buildBatteryHealthSnapshot } from "../battery";
+import { useRosConnection } from "../hooks/useRosConnection";
+import { useBatterySimulation } from "../hooks/useBatterySimulation";
 
 const CONTROL_MODES = ["Drive Command", "Arm Command", "Science Command", "Emergency Stop"];
 
@@ -31,7 +33,7 @@ function CameraFeed({ cameraId, label, height = 170, rotateDeg = 0 }) {
       }}
     >
       <img
-        src={`http://127.0.0.1:5000/camera/${cameraId}`}
+        src={`${apiBaseUrl}/camera/${cameraId}`}
         alt={label}
         style={{
           width: "100%",
@@ -93,7 +95,7 @@ export default function OperationsWall({ pane = "all", layout = "default" }) {
   const [driveRotate, setDriveRotate] = useState(0);
   const [gps, setGps] = useState({ latitude: 38.9897, longitude: -76.9378 });
   const [speedMps, setSpeedMps] = useState(0);
-  const [rosStatus, setRosStatus] = useState("connecting...");
+  const { rosRef, rosStatus } = useRosConnection();
   const [goalLat, setGoalLat] = useState("38.9897");
   const [goalLon, setGoalLon] = useState("-76.9378");
   const [goalMode, setGoalMode] = useState("GNSS");
@@ -111,11 +113,8 @@ export default function OperationsWall({ pane = "all", layout = "default" }) {
   const driveFeeds = DRIVE_PRESETS[drivePresetIdx].feeds;
 
   useEffect(() => {
-    const ros = new ROSLIB.Ros({ url: getRosbridgeUrl() });
-
-    ros.on("connection", () => setRosStatus("connected"));
-    ros.on("error", () => setRosStatus("error"));
-    ros.on("close", () => setRosStatus("closed"));
+    const ros = rosRef.current;
+    if (!ros) return;
 
     const gpsTopic = new ROSLIB.Topic({
       ros,
@@ -143,7 +142,6 @@ export default function OperationsWall({ pane = "all", layout = "default" }) {
     return () => {
       gpsTopic.unsubscribe();
       odomTopic.unsubscribe();
-      ros.close();
     };
   }, []);
 
@@ -175,12 +173,12 @@ export default function OperationsWall({ pane = "all", layout = "default" }) {
     };
   }, [apiBaseUrl]);
 
+  const { batteryDrive, batteryArm } = useBatterySimulation({ initialDrive: systemStats.batteryDrive, initialArm: systemStats.batteryArm });
+
   useEffect(() => {
     const id = setInterval(() => {
       setSystemStats((prev) => ({
         ...prev,
-        batteryDrive: Math.max(10, prev.batteryDrive - 0.04),
-        batteryArm: Math.max(10, prev.batteryArm - 0.03),
         sensorTemp: Math.max(20, Math.min(95, prev.sensorTemp + (Math.random() * 0.8 - 0.4))),
       }));
     }, 1200);
@@ -188,11 +186,11 @@ export default function OperationsWall({ pane = "all", layout = "default" }) {
   }, []);
 
   const driveBattery = buildBatteryHealthSnapshot({
-    socPercent: systemStats.batteryDrive,
+    socPercent: batteryDrive,
     temperatureC: systemStats.sensorTemp,
   });
   const armBattery = buildBatteryHealthSnapshot({
-    socPercent: systemStats.batteryArm,
+    socPercent: batteryArm,
     temperatureC: systemStats.sensorTemp,
   });
 
@@ -312,13 +310,13 @@ export default function OperationsWall({ pane = "all", layout = "default" }) {
     <MonitorShell title="Drone OSD">
       <div style={{ display: "flex", flexDirection: "column", gap: 10, height: "100%" }}>
         <div style={{ position: "relative", flex: 1, minHeight: 160, borderRadius: 16, overflow: "hidden", border: "2px solid #3b3b3b", background: "#101010" }}>
-          <img src="http://127.0.0.1:5000/object-detection/stream/0" alt="Drone feed primary" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+          <img src={`${apiBaseUrl}/object-detection/stream/0`} alt="Drone feed primary" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
           <div style={{ position: "absolute", top: 8, left: 8, fontSize: 12, fontWeight: 800, color: "#d8ffd8", background: "rgba(0,0,0,0.55)", borderRadius: 8, padding: "5px 8px" }}>
             SPD {odomSummary}
           </div>
         </div>
         <div style={{ position: "relative", flex: 1, minHeight: 160, borderRadius: 16, overflow: "hidden", border: "2px solid #3b3b3b", background: "#101010" }}>
-          <img src="http://127.0.0.1:5000/camera/15" alt="Drone feed secondary" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+          <img src={`${apiBaseUrl}/camera/15`} alt="Drone feed secondary" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
           <div style={{ position: "absolute", top: 8, left: 8, fontSize: 12, fontWeight: 800, color: "#d8ffd8", background: "rgba(0,0,0,0.55)", borderRadius: 8, padding: "5px 8px" }}>
             GPS {gps.latitude.toFixed(5)}, {gps.longitude.toFixed(5)}
           </div>

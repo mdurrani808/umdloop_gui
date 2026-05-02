@@ -1,8 +1,10 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import { getApiBaseUrl } from "../config";
 
 export default function Navigation({ selectedNavItem }) {
+  const apiBaseUrl = getApiBaseUrl();
   const [running, setRunning] = useState(false);
   const [pid, setPid] = useState(null);
   const [error, setError] = useState("");
@@ -14,7 +16,7 @@ export default function Navigation({ selectedNavItem }) {
   const fetchStatus = async () => {
     try {
       setError("");
-      const res = await fetch("http://127.0.0.1:5000/object-detection/status");
+      const res = await fetch(`${apiBaseUrl}/object-detection/status`);
       const data = await res.json();
       setRunning(Boolean(data.running));
       setPid(data.pid ?? null);
@@ -28,7 +30,7 @@ export default function Navigation({ selectedNavItem }) {
   const startDetection = async () => {
     try {
       setError("");
-      await fetch("http://127.0.0.1:5000/object-detection/start", { method: "POST" });
+      await fetch(`${apiBaseUrl}/object-detection/start`, { method: "POST" });
       await fetchStatus();
     } catch (_) {
       setError("Failed to start");
@@ -38,7 +40,7 @@ export default function Navigation({ selectedNavItem }) {
   const stopDetection = async () => {
     try {
       setError("");
-      await fetch("http://127.0.0.1:5000/object-detection/stop", { method: "POST" });
+      await fetch(`${apiBaseUrl}/object-detection/stop`, { method: "POST" });
       await fetchStatus();
     } catch (_) {
       setError("Failed to stop");
@@ -46,12 +48,11 @@ export default function Navigation({ selectedNavItem }) {
   };
 
   const onPathPlan = async () => {
-    console.log("Path plan clicked", { latitude, longitude, navMode });
     try {
       setError("");
       setPathPlanStatus("Sending...");
 
-      const res = await fetch("http://127.0.0.1:5000/navigation/path-plan", {
+      const res = await fetch(`${apiBaseUrl}/navigation/path-plan`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -141,7 +142,7 @@ export default function Navigation({ selectedNavItem }) {
 
           <div style={{ textAlign: "center" }}>
             <h2>Object Detection Stream</h2>
-            <img src="http://127.0.0.1:5000/object-detection/stream/0" alt="Object Detection Stream" style={{ width: "640px", height: "480px" }} />
+            <img src={`${apiBaseUrl}/object-detection/stream/0`} alt="Object Detection Stream" style={{ width: "640px", height: "480px" }} />
           </div>
         </div>
       )}

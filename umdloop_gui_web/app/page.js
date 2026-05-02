@@ -1,13 +1,12 @@
 "use client";
 
 import React, { useState } from "react";
-import NavigationBar from "./GUI functions/NavigationBar";
-import PageContent from "./GUI functions/PageContent";
-import SubsystemBar from "./GUI functions/SubsystemBar";
-import { MODES, NAVIGATION_BUTTONS, SUBSYSTEMS } from "./GUI functions/pageConstants";
+import NavigationBar from "./components/NavigationBar";
+import PageContent from "./components/PageContent";
+import SubsystemBar from "./components/SubsystemBar";
+import { MODES, NAVIGATION_BUTTONS, SUBSYSTEMS } from "./components/pageConstants";
 
 export default function LoopGui() {
-  console.log("🔥 LOOP GUI RENDERED");
   const [selectedMode, setSelectedMode] = useState(MODES[0]);
   const [selectedSubsystem, setSelectedSubsystem] = useState(SUBSYSTEMS[0]);
   const [selectedNavItem, setSelectedNavItem] = useState(NAVIGATION_BUTTONS[0]);

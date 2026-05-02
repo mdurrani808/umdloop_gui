@@ -3,7 +3,7 @@
 import React, { useState, useRef, useCallback, useEffect } from "react";
 import { Map, Marker } from "react-map-gl/maplibre";
 import "maplibre-gl/dist/maplibre-gl.css";
-import { useLocalTiles } from "../config";
+import { useLocalTiles, getMapTilerKey, getApiBaseUrl } from "../config";
 
 export default function MapView({ selectedSubsystem, titleOverride }) {
   const [viewState, setViewState] = useState({
@@ -21,7 +21,7 @@ export default function MapView({ selectedSubsystem, titleOverride }) {
   useEffect(() => {
     const poll = async () => {
       try {
-        const res = await fetch("http://127.0.0.1:5000/navigation/rover-position");
+        const res = await fetch(`${getApiBaseUrl()}/navigation/rover-position`);
         const data = await res.json();
         if (data.fix) {
           const pos = { latitude: data.latitude, longitude: data.longitude };
@@ -80,10 +80,9 @@ export default function MapView({ selectedSubsystem, titleOverride }) {
 
   const deleteAllWaypoints = () => setWaypoints([]);
 
-  const MAPTILER_KEY = "DDQqKsPBfdOZOVxgcoy5";
   const tileUrl = useLocalTiles()
     ? "/tiles/{z}/{x}/{y}.jpg"
-    : `https://api.maptiler.com/tiles/satellite/{z}/{x}/{y}.jpg?key=${MAPTILER_KEY}`;
+    : `https://api.maptiler.com/tiles/satellite/{z}/{x}/{y}.jpg?key=${getMapTilerKey()}`;
 
   const mapStyle = {
     version: 8,

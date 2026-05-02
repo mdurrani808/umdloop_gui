@@ -2,8 +2,9 @@
 
 import React, { useEffect, useState } from "react";
 import ROSLIB from "roslib";
-import { TECHNICIAN_COMMAND_TOPICS, TECHNICIAN_TOPICS, getRosbridgeUrl } from "../config";
+import { TECHNICIAN_COMMAND_TOPICS, TECHNICIAN_TOPICS } from "../config";
 import { TATTU_HV_6S_22000, buildBatteryHealthSnapshot } from "../battery";
+import { useRosConnection } from "../hooks/useRosConnection";
 
 export default function TechnicianDashboard() {
   const [setHours, setSetHours] = useState("00");
@@ -15,7 +16,7 @@ export default function TechnicianDashboard() {
   const [ledState, setLedState] = useState("GREEN");
   const [laserWarningOn, setLaserWarningOn] = useState(false);
   const [showCanPopup, setShowCanPopup] = useState(false);
-  const [rosStatus, setRosStatus] = useState("connecting...");
+  const { rosRef, rosStatus } = useRosConnection();
   const [bytesPerSecond, setBytesPerSecond] = useState(0);
   const [roverVelocityMps, setRoverVelocityMps] = useState(0);
   const [headingDeg, setHeadingDeg] = useState(null);
@@ -86,7 +87,6 @@ export default function TechnicianDashboard() {
     steerRR: true,
   });
   const [motorCommandStatus, setMotorCommandStatus] = useState("No command sent");
-  const rosRef = React.useRef(null);
   const hardStopBurstRef = React.useRef(null);
 
   useEffect(() => {
@@ -112,8 +112,8 @@ export default function TechnicianDashboard() {
   }, []);
 
   useEffect(() => {
-    const ros = new ROSLIB.Ros({ url: getRosbridgeUrl() });
-    rosRef.current = ros;
+    const ros = rosRef.current;
+    if (!ros) return;
     let byteCounter = 0;
 
     const markTopicAvailable = (key) => {
@@ -128,10 +128,6 @@ export default function TechnicianDashboard() {
       const numeric = Number(value);
       return Number.isFinite(numeric) ? numeric : null;
     };
-
-    ros.on("connection", () => setRosStatus("connected"));
-    ros.on("error", () => setRosStatus("error"));
-    ros.on("close", () => setRosStatus("disconnected"));
 
     const countBytes = (msg) => {
       try {
@@ -319,10 +315,6 @@ export default function TechnicianDashboard() {
         clearInterval(hardStopBurstRef.current);
         hardStopBurstRef.current = null;
       }
-      if (rosRef.current === ros) {
-        rosRef.current = null;
-      }
-      ros.close();
     };
   }, []);
 
