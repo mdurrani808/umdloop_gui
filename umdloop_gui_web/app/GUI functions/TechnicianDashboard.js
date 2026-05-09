@@ -259,7 +259,8 @@ export default function TechnicianDashboard() {
     headingTopic.subscribe((msg) => {
       countBytes(msg);
       markHeartbeat("heading");
-      const heading = parseMetric(msg?.data ?? msg?.heading_deg ?? msg?.heading);
+      // compass_bearing is 0=North CW degrees — natural for display; heading is ROS radians
+      const heading = parseMetric(msg?.compass_bearing ?? msg?.data);
       if (heading != null) {
         setHeadingDeg(heading);
         markTopicAvailable("heading");
