@@ -19,39 +19,69 @@ Install Python dependencies with uv (creates a virtual environment automatically
 uv sync
 ```
 
-Install Node dependencies and run the development server:
+Install Node dependencies:
 
 ```bash
 npm install
-npm run dev
 ```
 
-Run the web server:
+### Development (localhost)
+
+For local development, run the Next.js dev server and the Python backend (simulating the Jetson) each in a separate terminal:
+
+```bash
+npm run dev
+```
 
 ```bash
 uv run python server.py
 ```
 
+This uses `.env.development`, which points all services at `localhost`:
+
+```
+NEXT_PUBLIC_ROSBRIDGE_WS_URL=ws://localhost:9090
+NEXT_PUBLIC_GUI_API_URL=http://localhost:5000
+NEXT_PUBLIC_WEBRTC_WS_URL=ws://localhost:8081
+NEXT_PUBLIC_RAMAN_WS_URL=ws://localhost:5001/ws/spectrum
+```
+
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
-## Field deployment (base station ↔ rover)
+### Production / Field deployment (base station ↔ rover)
 
-- **Base station** runs this GUI and has internet (for map tiles).
-- **Rover** has no internet; it runs ROS 2 and Rosbridge.
+Everything runs on the **Jetson (rover)** — the Next.js frontend, the Python backend, and all ROS services. The base station just opens a browser and navigates to the Jetson's IP.
 
-So that the map shows the rover's location, the GUI connects to the rover over your radio link:
+`.env.production` points all services at the Jetson's static IP (`192.168.88.90`):
 
-1. On the **rover**: run Rosbridge (e.g. `ros2 launch rosbridge_server rosbridge_websocket_launch.xml`) so it serves WebSocket on the rover's IP (e.g. port 9090).
-2. Put rover and base station on the same network over radio (Wi‑Fi bridge, mesh, or modem so the base can reach the rover's IP).
-3. On the **base station**, set the Rosbridge URL to the rover's address. Create `umdloop_gui_web/.env.local`:
+```
+NEXT_PUBLIC_ROSBRIDGE_WS_URL=ws://192.168.88.90:9090
+NEXT_PUBLIC_GUI_API_URL=http://192.168.88.90:5000
+NEXT_PUBLIC_WEBRTC_WS_URL=ws://192.168.88.90:8081
+NEXT_PUBLIC_RAMAN_WS_URL=ws://192.168.88.90:5001/ws/spectrum
+```
 
-   ```bash
-   NEXT_PUBLIC_ROSBRIDGE_WS_URL=ws://ROVER_IP:9090
-   ```
+**On the Jetson**, run the following:
 
-   Replace `ROVER_IP` with the rover's IP on that network (e.g. `192.168.1.100`). Then rebuild/restart the GUI.
+```bash
+# Build and serve the GUI
+npm run build
+npm run start
+```
 
-The Map view subscribes to `/gps/fix` (NavSatFix) from the rover over that connection and shows the rover as a green marker. Ensure the rover publishes `/gps/fix` (e.g. from the localization stack or GPS driver).
+```bash
+# Python backend
+uv run python server.py
+```
+
+```bash
+# ROS bridge
+ros2 launch rosbridge_server rosbridge_websocket_launch.xml
+```
+
+**On the base station**, open a browser and go to `http://192.168.88.90:3000`.
+
+The Map view subscribes to `/gps/fix` (NavSatFix) from the rover and shows the rover as a green marker.
 
 For UMDLOOP-Native
 To Build, go to /build
