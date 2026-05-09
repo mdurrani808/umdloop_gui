@@ -6,8 +6,7 @@ import CameraFeed from "./CameraFeed";
 import CameraManagerModal from "./CameraManagerModal";
 import MissionPanel from "./MissionPanel";
 import { CAMERA_ROLES } from "./pageConstants";
-
-const RAMAN_WS_URL = "ws://localhost:5001/ws/spectrum";
+import { getRamanUrl } from "../config";
 
 export default function OperatorTab({ selectedSubsystem, setSelectedSubsystem }) {
   const [fullscreenCam, setFullscreenCam] = useState(null);
@@ -118,7 +117,7 @@ export default function OperatorTab({ selectedSubsystem, setSelectedSubsystem })
           <div style={{ color: "#d8d8d8", fontSize: "13px" }}>
             Live Raman spectrum from spectrometer backend on port 5001
           </div>
-          <RamanPlot wsUrl={RAMAN_WS_URL} width={700} height={400} />
+          <RamanPlot wsUrl={getRamanUrl()} width={700} height={400} />
           <div style={{ color: "#a9a9a9", fontSize: "12px" }}>
             Start with: <code>python3 spectrometer/raman_backend.py</code>
           </div>

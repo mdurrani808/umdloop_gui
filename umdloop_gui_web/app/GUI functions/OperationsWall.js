@@ -273,7 +273,7 @@ export default function OperationsWall({ pane = "all", layout = "default" }) {
     <MonitorShell title="Drone OSD">
       <div style={{ display: "flex", flexDirection: "column", gap: 10, height: "100%" }}>
         <div style={{ position: "relative", flex: 1, minHeight: 160, borderRadius: 16, overflow: "hidden", border: "2px solid #3b3b3b", background: "#101010" }}>
-          <img src="http://127.0.0.1:5000/object-detection/stream/0" alt="Drone feed primary" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+          <img src={`${getApiBaseUrl()}/object-detection/stream/0`} alt="Drone feed primary" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
           <div style={{ position: "absolute", top: 8, left: 8, fontSize: 12, fontWeight: 800, color: "#d8ffd8", background: "rgba(0,0,0,0.55)", borderRadius: 8, padding: "5px 8px" }}>
             SPD {odomSummary}
           </div>

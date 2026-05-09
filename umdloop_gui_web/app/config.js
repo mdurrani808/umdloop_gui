@@ -3,9 +3,11 @@
  * Base station has internet; rover does not. GUI runs on base and connects to rover over radio.
  *
  * Set in .env.local or at build time:
- *   NEXT_PUBLIC_ROSBRIDGE_WS_URL - WebSocket URL for Rosbridge on the rover (default: ws://localhost:9090).
- *                                  In the field, set to e.g. ws://192.168.1.100:9090 (rover's IP on radio network).
- *   NEXT_PUBLIC_GUI_API_URL      - Base URL for the local Flask API (default: http://127.0.0.1:5000).
+ *   NEXT_PUBLIC_ROSBRIDGE_WS_URL - WebSocket URL for Rosbridge on the Jetson (default: ws://localhost:9090).
+ *                                  In the field, set to e.g. ws://192.168.1.100:9090 (Jetson IP on radio network).
+ *   NEXT_PUBLIC_GUI_API_URL      - Base URL for the Flask API on the Jetson (default: http://localhost:5000).
+ *   NEXT_PUBLIC_WEBRTC_WS_URL    - WebSocket URL for WebRTC signaling on the Jetson (default: ws://localhost:8081).
+ *   NEXT_PUBLIC_RAMAN_WS_URL     - WebSocket URL for Raman spectrometer backend on the Jetson (default: ws://localhost:5001/ws/spectrum).
  *   NEXT_PUBLIC_USE_LOCAL_TILES  - Set to "true" to use offline tiles from public/tiles/ instead of MapTiler CDN.
  *                                  Run `python3 scripts/download_tiles.py` first to populate the tiles.
  */
@@ -33,6 +35,13 @@ export function getWebRTCUrl() {
     return window.__WEBRTC_WS_URL__ ?? "ws://localhost:8081";
   }
   return process.env.NEXT_PUBLIC_WEBRTC_WS_URL || "ws://localhost:8081";
+}
+
+export function getRamanUrl() {
+  if (typeof window !== "undefined") {
+    return window.__RAMAN_WS_URL__ ?? "ws://localhost:5001/ws/spectrum";
+  }
+  return process.env.NEXT_PUBLIC_RAMAN_WS_URL || "ws://localhost:5001/ws/spectrum";
 }
 
 

@@ -7,7 +7,7 @@
  * Install: npm install webgl-plot
  *
  * Usage:
- *   <RamanPlot wsUrl="ws://localhost:5000/ws/spectrum" />
+ *   <RamanPlot wsUrl="ws://localhost:5001/ws/spectrum" />
  *   <RamanPlot testMode />  // runs with simulated data
  */
 import React, { useRef, useEffect, useCallback, useState } from "react";
@@ -50,7 +50,7 @@ function generateTestSpectrum() {
 }
 
 const RamanPlot = ({
-  wsUrl = "ws://localhost:5000/ws/spectrum",
+  wsUrl,
   width = 900,
   height = 400,
   testMode = false,

@@ -38,8 +38,9 @@ umdloop_gui_web/yarn-debug.log*
 umdloop_gui_web/yarn-error.log*
 umdloop_gui_web/.pnpm-debug.log*
 
-# env files (can opt-in for committing if needed)
-umdloop_gui_web/.env*
+# env files — .env.development and .env.production are committed (no secrets)
+# .env*.local files are gitignored (contain secrets like API keys)
+umdloop_gui_web/.env*.local
 
 # vercel
 umdloop_gui_web/.vercel

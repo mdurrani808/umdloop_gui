@@ -176,4 +176,4 @@ async def get_spectrum():
 if __name__ == "__main__":
     import uvicorn
 
-    uvicorn.run("raman_backend:app", host="127.0.0.1", port=5001, reload=True)
+    uvicorn.run("raman_backend:app", host="0.0.0.0", port=5001, reload=True)
