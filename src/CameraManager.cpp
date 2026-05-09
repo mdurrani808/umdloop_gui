@@ -333,6 +333,22 @@ static void logConfigConflicts(const std::map<std::string, CameraConfig>& config
     }
 }
 
+std::string CameraManager::pipelineKey(int clientId, const std::string& id) {
+    return std::to_string(clientId) + ":" + id;
+}
+
+static int clientIdFromPipelineKey(const std::string& key) {
+    auto pos = key.find(':');
+    if (pos == std::string::npos) return 0;
+    return std::atoi(key.substr(0, pos).c_str());
+}
+
+static std::string cameraIdFromPipelineKey(const std::string& key) {
+    auto pos = key.find(':');
+    if (pos == std::string::npos) return key;
+    return key.substr(pos + 1);
+}
+
 
 void CameraManager::loadConfigs(const std::string& path) {
     std::ifstream f(path);
@@ -566,7 +582,7 @@ void CameraManager::discoverCameras() {
     }
 
     for (auto it = pipelines_.begin(); it != pipelines_.end(); ) {
-        if (activeCameraIds_.count(it->first)) {
+        if (activeCameraIds_.count(cameraIdFromPipelineKey(it->first))) {
             ++it;
             continue;
         }
@@ -588,35 +604,37 @@ void CameraManager::discoverCameras() {
     logConfigConflicts(configs_);
 }
 
-void CameraManager::enableCamera(const std::string& id) {
+bool CameraManager::isEnabled(const std::string& id) const {
+    return viewerCount(id) > 0;
+}
+
+bool CameraManager::isEnabledForClient(int clientId, const std::string& id) const {
+    return pipelines_.count(pipelineKey(clientId, id)) > 0;
+}
+
+int CameraManager::viewerCount(const std::string& id) const {
+    int count = 0;
+    for (const auto& [key, _] : pipelines_) {
+        if (cameraIdFromPipelineKey(key) == id)
+            ++count;
+    }
+    return count;
+}
+
+void CameraManager::enableCamera(int clientId, const std::string& id) {
     auto it = configs_.find(id);
     if (it == configs_.end()) {
-        std::cerr << "enableCamera: unknown id: " << id << std::endl;
+        std::cerr << "enableCamera: unknown id: " << id << " client=" << clientId << std::endl;
         return;
     }
     if (!activeCameraIds_.count(id)) {
-        std::cerr << "enableCamera: refusing inactive/stale id: " << id << std::endl;
+        std::cerr << "enableCamera: refusing inactive/stale id: " << id
+                  << " client=" << clientId << std::endl;
         return;
     }
 
-    if (pipelines_.count(id)) disableCamera(id);
-
-    for (const auto& entry : pipelines_) {
-        const auto& activeId = entry.first;
-        auto activeCfg = configs_.find(activeId);
-        if (activeCfg == configs_.end()) continue;
-
-        const bool sameDevice = activeCfg->second.devicePath == it->second.devicePath;
-        const bool sameUsb = !activeCfg->second.usbPath.empty() &&
-                             activeCfg->second.usbPath == it->second.usbPath;
-        if (sameDevice || sameUsb) {
-            std::cerr << "enableCamera: refusing to start " << id
-                      << " because " << activeId << " is already using "
-                      << (sameUsb ? it->second.usbPath : it->second.devicePath)
-                      << std::endl;
-            return;
-        }
-    }
+    const std::string key = pipelineKey(clientId, id);
+    if (pipelines_.count(key)) disableCamera(clientId, id);
 
     std::string lastError;
     constexpr int kMaxAttempts = 3;
@@ -624,28 +642,34 @@ void CameraManager::enableCamera(const std::string& id) {
         auto pipeline = std::make_unique<CameraPipeline>(it->second, stunServer_);
 
         if (onOffer_) {
-            pipeline->setOnOfferCreatedCallback([this, id](const std::string& sdp) {
-                onOffer_(id, sdp);
+            pipeline->setOnOfferCreatedCallback([this, clientId, id](const std::string& sdp) {
+                std::cout << "Routing offer: client=" << clientId << " camera=" << id << std::endl;
+                onOffer_(clientId, id, sdp);
             });
         }
         if (onIce_) {
-            pipeline->setOnIceCandidateCallback([this, id](const std::string& candidate, int mline) {
-                onIce_(id, candidate, mline);
+            pipeline->setOnIceCandidateCallback([this, clientId, id](const std::string& candidate, int mline) {
+                std::cout << "Routing ICE: client=" << clientId << " camera=" << id << std::endl;
+                onIce_(clientId, id, candidate, mline);
             });
         }
-        pipeline->setOnErrorCallback([id](const std::string& message) {
-            std::cerr << "Pipeline error for " << id << ": " << message << std::endl;
+        pipeline->setOnErrorCallback([clientId, id](const std::string& message) {
+            std::cerr << "Pipeline error for client=" << clientId
+                      << " camera=" << id << ": " << message << std::endl;
         });
 
         if (pipeline->start()) {
-            pipelines_[id] = std::move(pipeline);
-            std::cout << "Camera enabled: " << id << std::endl;
+            pipelines_[key] = std::move(pipeline);
+            std::cout << "Camera enabled: client=" << clientId
+                      << " camera=" << id
+                      << " viewers=" << viewerCount(id) << std::endl;
             return;
         }
 
         lastError = pipeline->getLastError();
         if (attempt < kMaxAttempts && containsBusyError(lastError)) {
-            std::cerr << "Retrying camera " << id << " after busy device error"
+            std::cerr << "Retrying camera " << id << " for client " << clientId
+                      << " after busy/allocation error"
                       << " (attempt " << (attempt + 1) << "/" << kMaxAttempts << ")"
                       << std::endl;
             std::this_thread::sleep_for(std::chrono::milliseconds(350));
@@ -655,14 +679,28 @@ void CameraManager::enableCamera(const std::string& id) {
         break;
     }
 
-    std::cerr << "Failed to start pipeline for: " << id;
+    std::cerr << "Failed to start pipeline for client=" << clientId << " camera=" << id;
     if (!lastError.empty()) std::cerr << " (" << lastError << ")";
     std::cerr << std::endl;
 }
 
-void CameraManager::disableCamera(const std::string& id) {
-    pipelines_.erase(id);
-    std::cout << "Camera disabled: " << id << std::endl;
+void CameraManager::disableCamera(int clientId, const std::string& id) {
+    pipelines_.erase(pipelineKey(clientId, id));
+    std::cout << "Camera disabled: client=" << clientId
+              << " camera=" << id
+              << " viewers=" << viewerCount(id) << std::endl;
+}
+
+void CameraManager::disconnectClient(int clientId) {
+    for (auto it = pipelines_.begin(); it != pipelines_.end(); ) {
+        if (clientIdFromPipelineKey(it->first) == clientId) {
+            std::cout << "Removing pipeline for disconnected client=" << clientId
+                      << " camera=" << cameraIdFromPipelineKey(it->first) << std::endl;
+            it = pipelines_.erase(it);
+        } else {
+            ++it;
+        }
+    }
 }
 
 bool CameraManager::renameCamera(const std::string& id, const std::string& newName) {
@@ -670,24 +708,35 @@ bool CameraManager::renameCamera(const std::string& id, const std::string& newNa
     if (!configs_.count(id))     return false;
     if (configs_.count(newName)) return false;
 
-    bool wasEnabled = pipelines_.count(id) > 0;
-    if (wasEnabled) disableCamera(id);
+    std::vector<int> enabledClients;
+    for (const auto& [key, _] : pipelines_) {
+        if (cameraIdFromPipelineKey(key) == id)
+            enabledClients.push_back(clientIdFromPipelineKey(key));
+    }
+    for (int clientId : enabledClients)
+        disableCamera(clientId, id);
 
     configs_[newName] = configs_[id];
     configs_.erase(id);
     if (activeCameraIds_.erase(id))
         activeCameraIds_.insert(newName);
 
-    if (wasEnabled) enableCamera(newName);
+    for (int clientId : enabledClients)
+        enableCamera(clientId, newName);
     return true;
 }
 
 bool CameraManager::updateConfig(const std::string& id, const CameraConfig& config) {
     if (!configs_.count(id)) return false;
+    std::vector<int> enabledClients;
+    for (const auto& [key, _] : pipelines_) {
+        if (cameraIdFromPipelineKey(key) == id)
+            enabledClients.push_back(clientIdFromPipelineKey(key));
+    }
     configs_[id] = config;
-    if (pipelines_.count(id)) {
-        disableCamera(id);
-        enableCamera(id);
+    for (int clientId : enabledClients) {
+        disableCamera(clientId, id);
+        enableCamera(clientId, id);
     }
     return true;
 }
@@ -716,24 +765,33 @@ bool CameraManager::applyConfigPatch(const std::string& id, const json& patch) {
     if (patch.contains("quality"))  { cfg.quality  = patch["quality"].get<std::string>(); pipelineChange = true; }
     if (patch.contains("exposure")) { cfg.exposure = patch["exposure"];                    pipelineChange = true; }
     if (patch.contains("role"))       cfg.role     = patch["role"].get<std::string>();
-    if (pipelineChange && pipelines_.count(id)) {
-        disableCamera(id);
-        enableCamera(id);
+    if (pipelineChange && isEnabled(id)) {
+        std::vector<int> enabledClients;
+        for (const auto& [key, _] : pipelines_) {
+            if (cameraIdFromPipelineKey(key) == id)
+                enabledClients.push_back(clientIdFromPipelineKey(key));
+        }
+        for (int clientId : enabledClients) {
+            disableCamera(clientId, id);
+            enableCamera(clientId, id);
+        }
     }
     return true;
 }
 
-void CameraManager::setRemoteAnswer(const std::string& id, const std::string& sdp) {
-    auto it = pipelines_.find(id);
+void CameraManager::setRemoteAnswer(int clientId, const std::string& id, const std::string& sdp) {
+    std::cout << "Routing answer: client=" << clientId << " camera=" << id << std::endl;
+    auto it = pipelines_.find(pipelineKey(clientId, id));
     if (it != pipelines_.end()) it->second->setRemoteAnswer(sdp);
 }
 
-void CameraManager::addIceCandidate(const std::string& id, const std::string& candidate, int sdpMLineIndex) {
-    auto it = pipelines_.find(id);
+void CameraManager::addIceCandidate(int clientId, const std::string& id, const std::string& candidate, int sdpMLineIndex) {
+    std::cout << "Routing remote ICE: client=" << clientId << " camera=" << id << std::endl;
+    auto it = pipelines_.find(pipelineKey(clientId, id));
     if (it != pipelines_.end()) it->second->addIceCandidate(candidate, sdpMLineIndex);
 }
 
-std::string CameraManager::buildStateJson() const {
+std::string CameraManager::buildStateJson(int clientId) const {
     json cameras = json::array();
     for (const auto& [id, cfg] : configs_) {
         if (!activeCameraIds_.count(id)) continue;
@@ -757,7 +815,8 @@ std::string CameraManager::buildStateJson() const {
             {"devicePath",   cfg.devicePath},
             {"usbPath",      cfg.usbPath},
             {"format",       cfg.format},
-            {"enabled",      pipelines_.count(id) > 0},
+            {"enabled",      clientId >= 0 ? isEnabledForClient(clientId, id) : isEnabled(id)},
+            {"viewerCount",  viewerCount(id)},
             {"width",        cfg.width},
             {"height",       cfg.height},
             {"fps",          cfg.fps},
@@ -771,10 +830,17 @@ std::string CameraManager::buildStateJson() const {
     return json{{"type", "state"}, {"cameras", cameras}}.dump();
 }
 
-PipelineStats CameraManager::getCameraStats(const std::string& id) {
-    auto it = pipelines_.find(id);
+PipelineStats CameraManager::getCameraStats(int clientId, const std::string& id) {
+    auto it = pipelines_.find(pipelineKey(clientId, id));
     if (it != pipelines_.end()) return it->second->getStats();
     return {};
+}
+
+std::vector<std::pair<int, std::string>> CameraManager::getActiveViews() const {
+    std::vector<std::pair<int, std::string>> views;
+    for (const auto& [key, _] : pipelines_)
+        views.push_back({clientIdFromPipelineKey(key), cameraIdFromPipelineKey(key)});
+    return views;
 }
 
 bool CameraManager::reapFailedPipelines() {
@@ -785,7 +851,10 @@ bool CameraManager::reapFailedPipelines() {
             continue;
         }
 
-        std::cerr << "Camera disabled after pipeline failure: " << it->first;
+        int clientId = clientIdFromPipelineKey(it->first);
+        std::string cameraId = cameraIdFromPipelineKey(it->first);
+        std::cerr << "Camera disabled after pipeline failure: client="
+                  << clientId << " camera=" << cameraId;
         const std::string err = it->second->getLastError();
         if (!err.empty()) std::cerr << " (" << err << ")";
         std::cerr << std::endl;

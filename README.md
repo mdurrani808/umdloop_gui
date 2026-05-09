@@ -39,6 +39,26 @@ cmake --build build
 ./build/camera-stream [--ws-port <port>]
 ```
 
+## Multi-Client WebRTC
+
+The WebSocket server supports multiple browser clients at the same time. Each
+connection receives a numeric `client_id` message:
+
+```json
+{"type":"client","client_id":1}
+```
+
+Existing GUI messages still use `camera_id` / `id` as before. The backend routes
+`offer`, `answer`, and ICE by the WebSocket connection that requested the camera,
+and includes `client_id` on server-originated `offer`, `ice`, and `stats`
+messages for debugging.
+
+Current implementation note: this is the safe first version with one WebRTC
+pipeline per `(client_id, camera_id)`. Multiple monitors can view the same
+physical camera without stealing signaling from each other, and one monitor
+disabling a camera does not stop another monitor's stream. This does increase
+capture/encode load compared with a future shared tee/fanout pipeline.
+
 ## Verify Camera Discovery
 
 On the Jetson or Linux host with the cameras attached:
