@@ -101,6 +101,45 @@ static int extractMaxFps(const GValue* v) {
     return 0;
 }
 
+static std::vector<int> extractFpsValues(const GValue* v) {
+    std::vector<int> values;
+    if (!v) return values;
+
+    auto addFraction = [&](const GValue* item) {
+        if (!GST_VALUE_HOLDS_FRACTION(item)) return;
+        int n = gst_value_get_fraction_numerator(item);
+        int d = gst_value_get_fraction_denominator(item);
+        if (d <= 0) return;
+        int fps = n / d;
+        if (fps > 0) values.push_back(fps);
+    };
+
+    if (GST_VALUE_HOLDS_FRACTION(v)) {
+        addFraction(v);
+    } else if (GST_VALUE_HOLDS_LIST(v)) {
+        guint sz = gst_value_list_get_size(v);
+        for (guint i = 0; i < sz; ++i)
+            addFraction(gst_value_list_get_value(v, i));
+    }
+
+    std::sort(values.begin(), values.end());
+    values.erase(std::unique(values.begin(), values.end()), values.end());
+    return values;
+}
+
+static int chooseSupportedFps(int requested, const CameraMode& mode) {
+    int target = requested > 0 ? requested : 10;
+    if (!mode.fpsValues.empty()) {
+        int best = mode.fpsValues.front();
+        for (int fps : mode.fpsValues) {
+            if (fps <= target) best = fps;
+            if (fps >= target) break;
+        }
+        return std::max(1, best);
+    }
+    return std::max(1, std::min(target, mode.maxFps));
+}
+
 static std::vector<CameraMode> parseCaps(GstCaps* caps) {
     std::vector<CameraMode> modes;
     if (!caps || gst_caps_is_any(caps) || gst_caps_is_empty(caps)) return modes;
@@ -128,12 +167,16 @@ static std::vector<CameraMode> parseCaps(GstCaps* caps) {
         if (!fpsVal) continue;
         mode.maxFps = extractMaxFps(fpsVal);
         if (mode.maxFps <= 0) continue;
+        mode.fpsValues = extractFpsValues(fpsVal);
 
         auto it = std::find_if(modes.begin(), modes.end(), [&](const CameraMode& m) {
             return m.format == mode.format && m.width == mode.width && m.height == mode.height;
         });
         if (it != modes.end()) {
             it->maxFps = std::max(it->maxFps, mode.maxFps);
+            it->fpsValues.insert(it->fpsValues.end(), mode.fpsValues.begin(), mode.fpsValues.end());
+            std::sort(it->fpsValues.begin(), it->fpsValues.end());
+            it->fpsValues.erase(std::unique(it->fpsValues.begin(), it->fpsValues.end()), it->fpsValues.end());
         } else {
             modes.push_back(mode);
         }
@@ -245,13 +288,14 @@ static void validateConfigMode(const std::string& id,
         cfg.format = fallback.format;
         cfg.width = fallback.width;
         cfg.height = fallback.height;
-        cfg.fps = std::min(cfg.fps > 0 ? cfg.fps : fallback.maxFps, fallback.maxFps);
+        cfg.fps = chooseSupportedFps(std::min(cfg.fps > 0 ? cfg.fps : 10, 10), fallback);
         return;
     }
 
-    if (cfg.fps <= 0 || cfg.fps > exact->maxFps) {
+    int supportedFps = chooseSupportedFps(cfg.fps, *exact);
+    if (cfg.fps != supportedFps) {
         int oldFps = cfg.fps;
-        cfg.fps = exact->maxFps;
+        cfg.fps = supportedFps;
         std::cerr << "camera config fps adjusted for " << id
                   << ": " << oldFps << " -> " << cfg.fps
                   << " on " << cfg.devicePath << std::endl;
@@ -504,7 +548,7 @@ void CameraManager::discoverCameras() {
             cfg.format = modes[0].format;
             cfg.width = modes[0].width;
             cfg.height = modes[0].height;
-            cfg.fps = std::min(cfg.fps, modes[0].maxFps);
+            cfg.fps = chooseSupportedFps(cfg.fps, modes[0]);
         }
 
         activeCameraIds_.insert(name);
@@ -660,7 +704,7 @@ bool CameraManager::applyConfigPatch(const std::string& id, const json& patch) {
         if (capIt != capabilities_.end()) {
             for (const auto& mode : capIt->second) {
                 if (mode.format == cfg.format && mode.width == cfg.width && mode.height == cfg.height) {
-                    cfg.fps = std::min(cfg.fps, mode.maxFps);
+                    cfg.fps = chooseSupportedFps(cfg.fps, mode);
                     break;
                 }
             }

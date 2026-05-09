@@ -15,6 +15,7 @@ struct CameraMode {
     int width;
     int height;
     int maxFps;
+    std::vector<int> fpsValues;
 };
 
 class CameraManager {

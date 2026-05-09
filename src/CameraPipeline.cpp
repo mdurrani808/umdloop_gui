@@ -16,6 +16,14 @@ static std::string timestamp() {
     return std::string(buf) + "." + std::to_string(tv.tv_usec / 1000);
 }
 
+static void removeSourceIfActive(guint& sourceId) {
+    if (!sourceId) return;
+    GMainContext* context = g_main_context_default();
+    if (g_main_context_find_source_by_id(context, sourceId))
+        g_source_remove(sourceId);
+    sourceId = 0;
+}
+
 
 static std::string buildPipelineString(const CameraConfig& cfg, const PlatformSpecifics& specs) {
     const bool isMjpg = (cfg.format == "MJPG");
@@ -31,12 +39,14 @@ static std::string buildPipelineString(const CameraConfig& cfg, const PlatformSp
         if (isMjpg) {
             src += " image/jpeg"
                    ",width="  + std::to_string(cfg.width) +
-                   ",height=" + std::to_string(cfg.height);
+                   ",height=" + std::to_string(cfg.height) +
+                   ",framerate=" + std::to_string(cfg.fps) + "/1";
         } else {
             src += " video/x-raw";
             if (!cfg.format.empty()) src += ",format=" + cfg.format;
             src += ",width="  + std::to_string(cfg.width) +
-                   ",height=" + std::to_string(cfg.height);
+                   ",height=" + std::to_string(cfg.height) +
+                   ",framerate=" + std::to_string(cfg.fps) + "/1";
         }
         if (isMjpg) src += " ! jpegdec";
         src += " ! videorate ! video/x-raw,framerate=" + std::to_string(cfg.fps) + "/1";
@@ -225,14 +235,8 @@ bool CameraPipeline::start() {
 
 void CameraPipeline::stop() {
     offerScheduled_.store(false);
-    if (offerSourceId_) {
-        g_source_remove(offerSourceId_);
-        offerSourceId_ = 0;
-    }
-    if (busWatchId_) {
-        g_source_remove(busWatchId_);
-        busWatchId_ = 0;
-    }
+    removeSourceIfActive(offerSourceId_);
+    removeSourceIfActive(busWatchId_);
     if (webrtcbin_) {
         gst_element_set_state(webrtcbin_, GST_STATE_NULL);
         gst_object_unref(webrtcbin_);
