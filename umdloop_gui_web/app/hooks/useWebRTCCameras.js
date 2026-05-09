@@ -13,6 +13,8 @@ const LEGACY_CAMERA_ROLE_MAP = {
   wheel_br_a: "wheel_br",
   wheel_br_b: "wheel_br",
 };
+const DEFAULT_CAMERA_FPS = 10;
+const DEFAULT_CAMERA_QUALITY = "low";
 
 function getCameraId(message) {
   return message?.id ?? message?.cam_id ?? message?.cameraId ?? message?.camera_id ?? message?.camera;
@@ -38,6 +40,8 @@ function normalizeCamera(camera, index) {
     role,
     device: cameraConfig.device ?? cameraConfig.path ?? `camera ${index + 1}`,
     capabilities: cameraConfig.capabilities ?? [],
+    fps: cameraConfig.fps ?? config.fps ?? DEFAULT_CAMERA_FPS,
+    quality: cameraConfig.quality ?? config.quality ?? DEFAULT_CAMERA_QUALITY,
     enabled: Boolean(cameraConfig.enabled ?? config.enabled),
     synthetic: Boolean(cameraConfig.synthetic),
   };

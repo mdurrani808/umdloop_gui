@@ -26,14 +26,16 @@ const ROLE_OPTIONS = [
 ];
 
 const QUALITY_OPTIONS = ["low", "medium", "high", "ultra"];
+const DEFAULT_CAMERA_FPS = 10;
+const DEFAULT_CAMERA_QUALITY = "low";
 
 function CameraCard({ camera }) {
   const { cameras, stats, streams, enableCamera, disableCamera, renameCamera, setRole, setConfig } = useWebRTC();
   const [nameInput, setNameInput] = useState(camera.name ?? "");
   const [previewing, setPreviewing] = useState(false);
   const [localRes, setLocalRes] = useState(null);
-  const [localFps, setLocalFps] = useState(camera.fps ?? 30);
-  const [localQuality, setLocalQuality] = useState(camera.quality ?? "medium");
+  const [localFps, setLocalFps] = useState(camera.fps ?? DEFAULT_CAMERA_FPS);
+  const [localQuality, setLocalQuality] = useState(camera.quality ?? DEFAULT_CAMERA_QUALITY);
   const [localExposure, setLocalExposure] = useState(camera.exposure ?? -1);
 
   const isEnabled = camera.enabled;
