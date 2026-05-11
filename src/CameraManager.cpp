@@ -360,6 +360,10 @@ static std::string cameraIdFromPipelineKey(const std::string& key) {
     return key.substr(pos + 1);
 }
 
+static std::string physicalCameraKey(const CameraConfig& cfg) {
+    return cfg.usbPath.empty() ? cfg.devicePath : cfg.usbPath;
+}
+
 
 void CameraManager::loadConfigs(const std::string& path) {
     std::ifstream f(path);
@@ -667,6 +671,25 @@ void CameraManager::enableCamera(int clientId, const std::string& id) {
 
     const std::string key = pipelineKey(clientId, id);
     if (pipelines_.count(key)) disableCamera(clientId, id);
+
+    const std::string targetPhysicalKey = physicalCameraKey(it->second);
+    if (!targetPhysicalKey.empty()) {
+        for (auto active = pipelines_.begin(); active != pipelines_.end(); ) {
+            const std::string activeCameraId = cameraIdFromPipelineKey(active->first);
+            auto activeCfg = configs_.find(activeCameraId);
+            if (activeCfg == configs_.end() ||
+                physicalCameraKey(activeCfg->second) != targetPhysicalKey) {
+                ++active;
+                continue;
+            }
+
+            std::cerr << "enableCamera: closing existing pipeline \""
+                      << active->first << "\" for physical camera "
+                      << targetPhysicalKey << " before starting client="
+                      << clientId << " camera=" << id << std::endl;
+            active = pipelines_.erase(active);
+        }
+    }
 
     std::string lastError;
     constexpr int kMaxAttempts = 3;

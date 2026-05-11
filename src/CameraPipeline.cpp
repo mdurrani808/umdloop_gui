@@ -251,6 +251,7 @@ void CameraPipeline::stop() {
     if (pipeline_) {
         std::cout << "[" << timestamp() << "] Stopping pipeline" << std::endl;
         gst_element_set_state(pipeline_, GST_STATE_NULL);
+        gst_element_get_state(pipeline_, nullptr, nullptr, 2 * GST_SECOND);
         gst_object_unref(pipeline_);
         pipeline_ = nullptr;
     }
