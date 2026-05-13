@@ -60,7 +60,7 @@
   - Delete old `GUI functions/OperatorTab.js`
   - Update import in PageContent
 
-- [ ] 8. Decompose Navigation into feature modules
+- [x] 8. Decompose Navigation into feature modules
   - Create `features/navigation/Navigation.jsx` — slim orchestrator
   - Create `features/navigation/ObjectDetection.jsx` — extract "Object Detection" panel
   - Create `features/navigation/ControlPanel.jsx` — extract "Control Panel" panel

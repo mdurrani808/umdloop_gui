@@ -4,7 +4,7 @@ import React from "react";
 import MapView from "../map/MapView";
 import OperationsWall from "../../GUI functions/OperationsWall";
 import OperatorTab from "../../features/operator/OperatorTab";
-import Navigation from "../../GUI functions/Navigation";
+import Navigation from "../../features/navigation/Navigation";
 import ScienceMonitor from "../../GUI functions/ScienceMonitor";
 import TechnicianDashboard from "../../GUI functions/TechnicianDashboard";
 import SubsystemBar from "./SubsystemBar";
