@@ -3,7 +3,7 @@
 import React from "react";
 import MapView from "../map/MapView";
 import OperationsWall from "../../GUI functions/OperationsWall";
-import OperatorTab from "../../GUI functions/OperatorTab";
+import OperatorTab from "../../features/operator/OperatorTab";
 import Navigation from "../../GUI functions/Navigation";
 import ScienceMonitor from "../../GUI functions/ScienceMonitor";
 import TechnicianDashboard from "../../GUI functions/TechnicianDashboard";

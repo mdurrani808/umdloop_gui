@@ -15,12 +15,12 @@
   - Delete old `config.js` and `GUI functions/pageConstants.js`
   - Update all imports across the codebase
 
-- [ ] 3. Create centralized API layer and move battery utility
+- [x] 3. Create centralized API layer and move battery utility
   - Create `lib/api.js` with fetch wrappers: `getObjectDetectionStatus`, `startObjectDetection`, `stopObjectDetection`, `sendPathPlan`, `getRoverPosition`, `getRadioStatus`, `sendRosCommand`
   - Move `battery.js` to `lib/battery.js`
   - Update all imports
 
-- [ ] 4. Extract shared hooks
+- [x] 4. Extract shared hooks
   - Create `hooks/useStopwatch.js` — extract stopwatch logic (used in OperatorTab, ScienceMonitor, TechnicianDashboard)
   - Create `hooks/useRosConnection.js` — extract ROS WebSocket setup + topic subscription pattern
   - Create `hooks/useObjectDetection.js` — extract polling logic from Navigation.js
@@ -31,14 +31,14 @@
 
 ## Phase 2: Extract reusable UI components
 
-- [ ] 5. Create shared UI components
+- [x] 5. Create shared UI components
   - Create `components/ui/Modal.jsx` — generic modal overlay (backdrop click, Escape key, title, close button)
   - Create `components/ui/GraphBar.jsx` — the repeated progress bar visualization
   - Create `components/ui/Timer.jsx` — stopwatch/countdown display component using `useStopwatch`
 
 ## Phase 3: Move and reorganize existing components
 
-- [ ] 6. Move layout and camera components
+- [x] 6. Move layout and camera components
   - Move `NavigationBar.js` → `components/layout/NavigationBar.jsx`
   - Move `SubsystemBar.js` → `components/layout/SubsystemBar.jsx`
   - Move `PageContent.js` → `components/layout/PageContent.jsx`
@@ -51,7 +51,7 @@
 
 ## Phase 4: Decompose large feature components
 
-- [ ] 7. Decompose OperatorTab into feature modules
+- [x] 7. Decompose OperatorTab into feature modules
   - Create `features/operator/OperatorTab.jsx` — slim orchestrator that switches on selectedSubsystem
   - Create `features/operator/DriveView.jsx` — extract "Drive (Default)" branch
   - Create `features/operator/ArmView.jsx` — extract "Arm" branch
